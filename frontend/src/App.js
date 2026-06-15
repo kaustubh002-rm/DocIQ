@@ -1,35 +1,162 @@
 import { useState } from "react";
 
 import UploadBox from "./components/UploadBox";
-
 import ChatBox from "./components/ChatBox";
-
 import PDFViewer from "./components/PDFViewer";
+import ChatHistory from "./components/ChatHistory";
+
+import Login from "./components/Login";
+import Signup from "./components/Signup";
 
 export default function App() {
 
-  const [uploadStatus, setUploadStatus] = useState("");
+  const [showHistory, setShowHistory] = useState(true);
 
-  const isUploaded =
-    uploadStatus === "PDF uploaded successfully";
+  const [showLogin, setShowLogin] = useState(true);
 
-  const pdfUrl = localStorage.getItem("pdfUrl");
+  const [pdfUrl, setPdfUrl] = useState(
+    localStorage.getItem("pdfUrl")
+  );
+
+  const token = localStorage.getItem("token");
+
+  const isUploaded = !!pdfUrl;
+
+  const logout = () => {
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("name");
+    localStorage.removeItem("pdfUrl");
+    localStorage.removeItem("pdfName");
+
+    window.location.reload();
+  };
+
+  const uploadNewPdf = () => {
+
+    localStorage.removeItem("pdfUrl");
+    localStorage.removeItem("pdfName");
+
+    setPdfUrl(null);
+  };
+
+  // ==========================
+  // LOGIN / SIGNUP
+  // ==========================
+  if (!token) {
+
+    return (
+
+      <div className="h-screen bg-[#0f172a] flex items-center justify-center">
+
+        <div className="w-full max-w-md">
+
+          {
+            showLogin
+              ? <Login />
+              : <Signup setShowLogin={setShowLogin} />
+          }
+
+          <button
+            className="mt-6 w-full text-blue-400 hover:text-blue-300"
+            onClick={() => setShowLogin(!showLogin)}
+          >
+            {
+              showLogin
+                ? "Don't have an account? Sign Up"
+                : "Already have an account? Login"
+            }
+          </button>
+
+        </div>
+
+      </div>
+
+    );
+  }
 
   return (
 
     <div className="h-screen bg-[#0f172a] text-white flex flex-col">
 
-      {/* TOP BAR */}
+      {/* NAVBAR */}
 
-      <div className="h-16 border-b border-slate-800 flex items-center px-6">
+      <div className="h-16 border-b border-slate-800 flex items-center justify-between px-6">
 
         <h1 className="text-2xl font-bold">
           PDF Assistant
         </h1>
 
+        <div className="flex items-center gap-3">
+
+          {isUploaded && (
+
+            <>
+              <div className="text-slate-400 text-sm">
+                📄 {localStorage.getItem("pdfName")}
+              </div>
+
+              <button
+                onClick={uploadNewPdf}
+                className="
+                  bg-green-600
+                  hover:bg-green-700
+                  px-4
+                  py-2
+                  rounded-lg
+                "
+              >
+                Upload New PDF
+              </button>
+
+              <button
+                onClick={() =>
+                  setShowHistory(!showHistory)
+                }
+                className="
+                  bg-slate-800
+                  hover:bg-slate-700
+                  px-4
+                  py-2
+                  rounded-lg
+                "
+              >
+                {showHistory
+                  ? "Hide History"
+                  : "Show History"}
+              </button>
+            </>
+
+          )}
+
+          <div className="text-slate-300">
+
+            Welcome,
+
+            <span className="font-semibold ml-2">
+              {localStorage.getItem("name")}
+            </span>
+
+          </div>
+
+          <button
+            onClick={logout}
+            className="
+              bg-red-600
+              hover:bg-red-700
+              px-4
+              py-2
+              rounded-lg
+            "
+          >
+            Logout
+          </button>
+
+        </div>
+
       </div>
 
-      {/* MAIN */}
+      {/* BODY */}
 
       <div className="flex-1 overflow-hidden">
 
@@ -40,16 +167,12 @@ export default function App() {
             <div className="w-full max-w-2xl px-6">
 
               <UploadBox
-                setUploadStatus={setUploadStatus}
+                setPdfUrl={setPdfUrl}
               />
 
-              {uploadStatus && (
-
-                <p className="mt-5 text-center text-lg">
-                  {uploadStatus}
-                </p>
-
-              )}
+              <p className="mt-6 text-center text-slate-400">
+                Upload a PDF to start chatting with it.
+              </p>
 
             </div>
 
@@ -59,20 +182,48 @@ export default function App() {
 
           <div className="h-full flex">
 
-            {/* PDF PANEL */}
+            {showHistory && (
 
-            <div className="w-1/2 border-r border-slate-800">
+              <div
+                className="
+                  w-[280px]
+                  bg-slate-950
+                  border-r
+                  border-slate-800
+                "
+              >
+                <ChatHistory />
+              </div>
 
+            )}
+
+            {/* PDF VIEWER */}
+
+            <div
+              className={`
+                ${
+                  showHistory
+                    ? "flex-1"
+                    : "w-[55%]"
+                }
+                border-r border-slate-800
+              `}
+            >
               <PDFViewer fileUrl={pdfUrl} />
-
             </div>
 
-            {/* CHAT PANEL */}
+            {/* CHAT */}
 
-            <div className="w-1/2">
-
+            <div
+              className={`
+                ${
+                  showHistory
+                    ? "w-[500px]"
+                    : "w-[45%]"
+                }
+              `}
+            >
               <ChatBox />
-
             </div>
 
           </div>
@@ -82,5 +233,6 @@ export default function App() {
       </div>
 
     </div>
+
   );
 }

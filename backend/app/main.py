@@ -9,16 +9,32 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.pdf_utils import extract_text_from_pdf
 from app.rag_pipeline import create_vector_store, get_qa_chain
-from app.database import pdf_collection
+from app.database import (
+    pdf_collection,
+    users_collection,
+    chat_collection
+)
 from app.models import QuestionRequest
+
+from jose import jwt
+from fastapi import Header
 
 # =========================
 # APP INIT
 # =========================
 app = FastAPI()
 
-print("🔥 FastAPI APP STARTED")
+from app.database import users_collection
+from app.auth import (
+    hash_password,
+    verify_password,
+    create_access_token
+)
 
+from app.models import (
+    SignupRequest,
+    LoginRequest
+)
 # =========================
 # CORS (FIXED)
 # =========================
@@ -39,12 +55,78 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 CURRENT_FILE = None
 
+
+SECRET_KEY = "YOUR_SECRET_KEY"
+
+def get_user_id(authorization:str):
+
+    token = authorization.split(" ")[1]
+
+    payload = jwt.decode(
+        token,
+        SECRET_KEY,
+        algorithms=["HS256"]
+    )
+
+    return payload["user_id"]
+
+
+@app.post("/signup")
+def signup(data: SignupRequest):
+
+    existing = users_collection.find_one({
+        "email": data.email
+    })
+
+    if existing:
+        return {
+            "error":"User already exists"
+        }
+
+    users_collection.insert_one({
+        "name":data.name,
+        "email":data.email,
+        "password":hash_password(data.password)
+    })
+
+    return {
+        "message":"Signup successful"
+    }
+
+@app.post("/login")
+def login(data: LoginRequest):
+
+    user = users_collection.find_one({
+        "email":data.email
+    })
+
+    if not user:
+        return {"error":"Invalid credentials"}
+
+    if not verify_password(
+        data.password,
+        user["password"]
+    ):
+        return {"error":"Invalid credentials"}
+
+    token = create_access_token({
+        "user_id":str(user["_id"])
+    })
+
+    return {
+        "token":token,
+        "name":user["name"]
+    }
+
 # =========================
 # ROOT
 # =========================
 @app.get("/")
 def root():
     return {"message": "PDF RAG API Running"}
+
+
+
 
 # =========================
 # UPLOAD PDF (FIXED + SAFE)
@@ -105,31 +187,144 @@ async def upload_pdf(file: UploadFile = File(...)):
 # ASK QUESTION
 # =========================
 @app.post("/ask")
-async def ask_question(request: QuestionRequest):
+async def ask_question(
+    request: QuestionRequest,
+    authorization: str = Header(None)
+):
 
     try:
+
         if CURRENT_FILE is None:
             return {"error": "Upload a PDF first"}
 
+        if not authorization:
+            return {"error": "Login required"}
+
+        # Get logged-in user id
+        user_id = get_user_id(authorization)
+
+        # Run RAG
         qa_chain = get_qa_chain()
-        response = qa_chain.invoke({"input": request.question})
+
+        response = qa_chain.invoke({
+            "input": request.question
+        })
 
         answer = response["answer"]
-        source_docs = response.get("context", [])
+
+        source_docs = response.get(
+            "context",
+            []
+        )
 
         seen = set()
         unique_files = []
 
         for doc in source_docs:
-            fname = doc.metadata.get("file_name", "Unknown")
+
+            fname = doc.metadata.get(
+                "file_name",
+                "Unknown"
+            )
+
             if fname not in seen:
+
                 seen.add(fname)
                 unique_files.append(fname)
 
-        return {
+        # Save chat history
+        chat_collection.insert_one({
+
+            "user_id": user_id,
+
+            "question": request.question,
+
             "answer": answer,
+
             "sources": unique_files,
+
+            "created_at": datetime.utcnow()
+
+        })
+
+        return {
+
+            "answer": answer,
+
+            "sources": unique_files
+
         }
 
     except Exception as e:
-        return {"error": str(e)}
+
+        return {
+            "error": str(e)
+        }
+    
+@app.get("/chat-history")
+def get_chat_history(
+    authorization: str = Header(None)
+):
+
+    try:
+
+        if not authorization:
+            return {
+                "error": "Login required"
+            }
+
+        user_id = get_user_id(
+            authorization
+        )
+
+        chats = list(
+
+            chat_collection.find(
+
+                {"user_id": user_id},
+
+                {
+                    "_id": 0
+                }
+
+            ).sort(
+                "created_at",
+                1
+            )
+
+        )
+
+        return chats
+
+    except Exception as e:
+
+        return {
+            "error": str(e)
+        }
+
+@app.get("/conversations")
+def get_conversations(
+    authorization: str = Header(None)
+):
+
+    user_id = get_user_id(authorization)
+
+    chats = list(
+        chat_collection.aggregate([
+            {
+                "$match": {
+                    "user_id": user_id
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$conversation_id",
+                    "title": {
+                        "$first": "$question"
+                    }
+                }
+            }
+        ])
+    )
+
+    return chats

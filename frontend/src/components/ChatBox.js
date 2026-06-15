@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import API from "../services/api";
 
@@ -14,6 +14,53 @@ export default function ChatBox() {
 
   const [loading, setLoading] = useState(false);
 
+  // Load previous chats after refresh
+  useEffect(() => {
+
+    const loadChats = async () => {
+
+      try {
+
+        const res = await API.get(
+          "/chat-history"
+        );
+
+        const loaded = [];
+
+        res.data.forEach((chat) => {
+
+          loaded.push({
+            type: "user",
+            text: chat.question
+          });
+
+          loaded.push({
+            type: "ai",
+            text:
+              chat.answer +
+              "\n\nSources:\n" +
+              ((chat.sources || []).join("\n"))
+          });
+
+        });
+
+        setMessages(loaded);
+
+      } catch (error) {
+
+        console.log(
+          "History Load Error:",
+          error
+        );
+
+      }
+
+    };
+
+    loadChats();
+
+  }, []);
+
   const askQuestion = async () => {
 
     if (!question.trim()) return;
@@ -23,17 +70,26 @@ export default function ChatBox() {
       text: question
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [
+      ...prev,
+      userMessage
+    ]);
 
     setLoading(true);
 
     try {
 
-      const response = await API.post("/ask", {
-        question
-      });
+      const response = await API.post(
+        "/ask",
+        {
+          question
+        }
+      );
 
-      console.log("BACKEND RESPONSE:", response.data);
+      console.log(
+        "BACKEND RESPONSE:",
+        response.data
+      );
 
       if (response.data.error) {
 
@@ -49,25 +105,39 @@ export default function ChatBox() {
       }
 
       const aiMessage = {
+
         type: "ai",
+
         text:
-          (response.data.answer || "No answer returned") +
+          (response.data.answer ||
+            "No answer returned") +
           "\n\nSources:\n" +
-          ((response.data.sources || []).join("\n\n"))
+          (
+            (response.data.sources || [])
+              .join("\n")
+          )
+
       };
 
-      setMessages((prev) => [...prev, aiMessage]);
+      setMessages((prev) => [
+        ...prev,
+        aiMessage
+      ]);
 
     } catch (error) {
 
       console.log(error);
 
       setMessages((prev) => [
+
         ...prev,
+
         {
           type: "ai",
-          text: "Backend connection failed"
+          text:
+            "Backend connection failed"
         }
+
       ]);
 
     } finally {
@@ -75,7 +145,9 @@ export default function ChatBox() {
       setLoading(false);
 
       setQuestion("");
+
     }
+
   };
 
   return (
@@ -112,13 +184,19 @@ export default function ChatBox() {
 
           <input
             value={question}
-            onChange={(e) => setQuestion(e.target.value)}
+            onChange={(e) =>
+              setQuestion(e.target.value)
+            }
             placeholder="Ask question from PDF..."
             className="flex-1 p-4 rounded-xl bg-slate-800 text-white outline-none"
             onKeyDown={(e) => {
+
               if (e.key === "Enter") {
+
                 askQuestion();
+
               }
+
             }}
           />
 
@@ -134,5 +212,6 @@ export default function ChatBox() {
       </div>
 
     </div>
+
   );
 }
