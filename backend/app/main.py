@@ -3,7 +3,7 @@ load_dotenv()
 
 import os
 from datetime import datetime
-
+from fastapi.responses import FileResponse
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,7 +12,8 @@ from app.rag_pipeline import create_vector_store, get_qa_chain
 from app.database import (
     pdf_collection,
     users_collection,
-    chat_collection
+    chat_collection,
+    pdf_chunks_collection
 )
 from app.models import QuestionRequest
 
@@ -132,11 +133,19 @@ def root():
 # UPLOAD PDF (FIXED + SAFE)
 # =========================
 @app.post("/upload-pdf")
-async def upload_pdf(file: UploadFile = File(...)):
+async def upload_pdf(
+    file: UploadFile = File(...),
+    authorization: str = Header(None)
+):
     global CURRENT_FILE
 
     try:
         print("🔥 Upload started")
+
+        if not authorization:
+            return {"error": "Login required"}
+
+        user_id = get_user_id(authorization)
 
         if not file.filename.endswith(".pdf"):
             return {"error": "Only PDF files allowed"}
@@ -166,9 +175,11 @@ async def upload_pdf(file: UploadFile = File(...)):
 
         # Save metadata
         pdf_collection.insert_one({
+            "user_id": user_id,
             "file_name": file.filename,
+            "file_path": file_path,
             "upload_date": datetime.utcnow(),
-            "chunk_count": chunk_count,
+            "chunk_count": chunk_count
         })
 
         print("✅ DB inserted")
@@ -194,8 +205,10 @@ async def ask_question(
 
     try:
 
-        if CURRENT_FILE is None:
-            return {"error": "Upload a PDF first"}
+        if not CURRENT_FILE:
+            return {
+                "error": "Please select a PDF"
+        }
 
         if not authorization:
             return {"error": "Login required"}
@@ -204,11 +217,25 @@ async def ask_question(
         user_id = get_user_id(authorization)
 
         # Run RAG
-        qa_chain = get_qa_chain()
+        qa_chain = get_qa_chain(
+             CURRENT_FILE
+        )
 
         response = qa_chain.invoke({
             "input": request.question
         })
+
+        source_docs = response.get(
+            "context",
+            []
+        )
+
+        if not source_docs:
+            return {
+                "answer":
+                "I could not find this information in the uploaded PDF.",
+                "sources": []
+            }
 
         answer = response["answer"]
 
@@ -328,3 +355,68 @@ def get_conversations(
     )
 
     return chats
+
+@app.get("/my-pdfs")
+def my_pdfs(
+    authorization: str = Header(None)
+):
+
+    try:
+
+        user_id = get_user_id(
+            authorization
+        )
+
+        pdfs = list(
+
+            pdf_collection.find(
+                {"user_id": user_id},
+                {
+                    "_id": 0,
+                    "file_name": 1,
+                    "upload_date": 1
+                }
+            ).sort(
+                "upload_date",
+                -1
+            )
+
+        )
+
+        return pdfs
+
+    except Exception as e:
+
+        return {
+            "error": str(e)
+        }
+    
+@app.post("/select-pdf/{file_name}")
+def select_pdf(
+    file_name: str,
+    authorization: str = Header(None)
+):
+
+    global CURRENT_FILE
+
+    CURRENT_FILE = file_name
+
+    return {
+        "message": f"{file_name} selected"
+    }
+
+@app.get("/pdf-file/{file_name}")
+def get_pdf_file(file_name: str):
+
+    file_path = os.path.join(
+        UPLOAD_DIR,
+        file_name
+    )
+
+    if not os.path.exists(file_path):
+        return {"error": "PDF not found"}
+
+    return FileResponse(
+        file_path,
+        media_type="application/pdf"
+    )

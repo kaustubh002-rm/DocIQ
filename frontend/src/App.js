@@ -4,6 +4,7 @@ import UploadBox from "./components/UploadBox";
 import ChatBox from "./components/ChatBox";
 import PDFViewer from "./components/PDFViewer";
 import ChatHistory from "./components/ChatHistory";
+import PdfList from "./components/PdfList";
 
 import Login from "./components/Login";
 import Signup from "./components/Signup";
@@ -11,6 +12,8 @@ import Signup from "./components/Signup";
 export default function App() {
 
   const [showHistory, setShowHistory] = useState(true);
+
+  const [showPdfs, setShowPdfs] = useState(false);
 
   const [showLogin, setShowLogin] = useState(true);
 
@@ -43,6 +46,7 @@ export default function App() {
   // ==========================
   // LOGIN / SIGNUP
   // ==========================
+
   if (!token) {
 
     return (
@@ -75,6 +79,10 @@ export default function App() {
     );
   }
 
+  // ==========================
+  // MAIN APP
+  // ==========================
+
   return (
 
     <div className="h-screen bg-[#0f172a] text-white flex flex-col">
@@ -92,9 +100,40 @@ export default function App() {
           {isUploaded && (
 
             <>
-              <div className="text-slate-400 text-sm">
+              {/* Current PDF */}
+
+              <div
+                className="
+                  bg-slate-800
+                  px-4
+                  py-2
+                  rounded-lg
+                  text-sm
+                  max-w-[250px]
+                  truncate
+                "
+              >
                 📄 {localStorage.getItem("pdfName")}
               </div>
+
+              {/* My PDFs */}
+
+              <button
+                onClick={() =>
+                  setShowPdfs(!showPdfs)
+                }
+                className="
+                  bg-purple-600
+                  hover:bg-purple-700
+                  px-4
+                  py-2
+                  rounded-lg
+                "
+              >
+                My PDFs
+              </button>
+
+              {/* Upload New PDF */}
 
               <button
                 onClick={uploadNewPdf}
@@ -106,8 +145,10 @@ export default function App() {
                   rounded-lg
                 "
               >
-                Upload New PDF
+                Upload PDF
               </button>
+
+              {/* Toggle History */}
 
               <button
                 onClick={() =>
@@ -121,9 +162,11 @@ export default function App() {
                   rounded-lg
                 "
               >
-                {showHistory
-                  ? "Hide History"
-                  : "Show History"}
+                {
+                  showHistory
+                    ? "Hide History"
+                    : "Show History"
+                }
               </button>
             </>
 
@@ -156,6 +199,21 @@ export default function App() {
 
       </div>
 
+      {/* PDF LIST */}
+
+      {showPdfs && (
+
+        <div className="bg-slate-900 border-b border-slate-800">
+
+          <PdfList
+            setPdfUrl={setPdfUrl}
+            close={() => setShowPdfs(false)}
+          />
+
+        </div>
+
+      )}
+
       {/* BODY */}
 
       <div className="flex-1 overflow-hidden">
@@ -182,6 +240,8 @@ export default function App() {
 
           <div className="h-full flex">
 
+            {/* HISTORY */}
+
             {showHistory && (
 
               <div
@@ -206,7 +266,8 @@ export default function App() {
                     ? "flex-1"
                     : "w-[55%]"
                 }
-                border-r border-slate-800
+                border-r
+                border-slate-800
               `}
             >
               <PDFViewer fileUrl={pdfUrl} />

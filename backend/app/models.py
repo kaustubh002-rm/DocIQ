@@ -15,5 +15,3 @@ class LoginRequest(BaseModel):
     password:str
 
 
-class QuestionRequest(BaseModel):
-    question:str
