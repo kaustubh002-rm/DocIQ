@@ -33,6 +33,7 @@ export default function App() {
     localStorage.removeItem("pdfName");
 
     window.location.reload();
+
   };
 
   const uploadNewPdf = () => {
@@ -41,6 +42,7 @@ export default function App() {
     localStorage.removeItem("pdfName");
 
     setPdfUrl(null);
+
   };
 
   // ==========================
@@ -77,6 +79,7 @@ export default function App() {
       </div>
 
     );
+
   }
 
   // ==========================
@@ -97,78 +100,80 @@ export default function App() {
 
         <div className="flex items-center gap-3">
 
+          {/* Current PDF */}
+
           {isUploaded && (
 
-            <>
-              {/* Current PDF */}
+            <div
+              className="
+                bg-slate-800
+                px-4
+                py-2
+                rounded-lg
+                text-sm
+                max-w-[250px]
+                truncate
+              "
+            >
+              📄 {localStorage.getItem("pdfName")}
+            </div>
 
-              <div
-                className="
-                  bg-slate-800
-                  px-4
-                  py-2
-                  rounded-lg
-                  text-sm
-                  max-w-[250px]
-                  truncate
-                "
-              >
-                📄 {localStorage.getItem("pdfName")}
-              </div>
+          )}
 
-              {/* My PDFs */}
+          {/* My PDFs */}
 
-              <button
-                onClick={() =>
-                  setShowPdfs(!showPdfs)
-                }
-                className="
-                  bg-purple-600
-                  hover:bg-purple-700
-                  px-4
-                  py-2
-                  rounded-lg
-                "
-              >
-                My PDFs
-              </button>
+          <button
+            onClick={() =>
+              setShowPdfs(!showPdfs)
+            }
+            className="
+              bg-purple-600
+              hover:bg-purple-700
+              px-4
+              py-2
+              rounded-lg
+            "
+          >
+            My PDFs
+          </button>
 
-              {/* Upload New PDF */}
+          {/* Upload PDF */}
 
-              <button
-                onClick={uploadNewPdf}
-                className="
-                  bg-green-600
-                  hover:bg-green-700
-                  px-4
-                  py-2
-                  rounded-lg
-                "
-              >
-                Upload PDF
-              </button>
+          <button
+            onClick={uploadNewPdf}
+            className="
+              bg-green-600
+              hover:bg-green-700
+              px-4
+              py-2
+              rounded-lg
+            "
+          >
+            Upload PDF
+          </button>
 
-              {/* Toggle History */}
+          {/* History Toggle */}
 
-              <button
-                onClick={() =>
-                  setShowHistory(!showHistory)
-                }
-                className="
-                  bg-slate-800
-                  hover:bg-slate-700
-                  px-4
-                  py-2
-                  rounded-lg
-                "
-              >
-                {
-                  showHistory
-                    ? "Hide History"
-                    : "Show History"
-                }
-              </button>
-            </>
+          {isUploaded && (
+
+            <button
+              onClick={() =>
+                setShowHistory(!showHistory)
+              }
+              className="
+                bg-slate-800
+                hover:bg-slate-700
+                px-4
+                py-2
+                rounded-lg
+              "
+            >
+              {
+                showHistory
+                  ? "Hide History"
+                  : "Show History"
+              }
+            </button>
 
           )}
 
@@ -228,8 +233,27 @@ export default function App() {
                 setPdfUrl={setPdfUrl}
               />
 
+              <div className="mt-6 text-center">
+
+                <button
+                  onClick={() =>
+                    setShowPdfs(true)
+                  }
+                  className="
+                    bg-purple-600
+                    hover:bg-purple-700
+                    px-5
+                    py-2
+                    rounded-lg
+                  "
+                >
+                  Open My PDFs
+                </button>
+
+              </div>
+
               <p className="mt-6 text-center text-slate-400">
-                Upload a PDF to start chatting with it.
+                Upload a PDF or open an existing one.
               </p>
 
             </div>
@@ -240,7 +264,7 @@ export default function App() {
 
           <div className="h-full flex">
 
-            {/* HISTORY */}
+            {/* CHAT HISTORY */}
 
             {showHistory && (
 
@@ -296,4 +320,5 @@ export default function App() {
     </div>
 
   );
+
 }

@@ -7,6 +7,9 @@ from fastapi.responses import FileResponse
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
+from urllib.parse import unquote
+from fastapi.responses import FileResponse
+
 from app.pdf_utils import extract_text_from_pdf
 from app.rag_pipeline import create_vector_store, get_qa_chain
 from app.database import (
@@ -16,6 +19,7 @@ from app.database import (
     pdf_chunks_collection
 )
 from app.models import QuestionRequest
+from bson import ObjectId
 
 from jose import jwt
 from fastapi import Header
@@ -43,7 +47,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
     allow_credentials=True,          # Change to True
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
@@ -51,11 +55,24 @@ app.add_middleware(
 # =========================
 # CONFIG
 # =========================
-UPLOAD_DIR = "app/uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+BASE_DIR = os.path.dirname(
+    os.path.abspath(__file__)
+)
+
+UPLOAD_DIR = os.path.join(
+    BASE_DIR,
+    "uploads"
+)
+
+os.makedirs(
+    UPLOAD_DIR,
+    exist_ok=True
+)
+
+print("UPLOAD_DIR =", UPLOAD_DIR)
 
 CURRENT_FILE = None
-
 
 SECRET_KEY = "YOUR_SECRET_KEY"
 
@@ -287,7 +304,6 @@ async def ask_question(
         return {
             "error": str(e)
         }
-    
 @app.get("/chat-history")
 def get_chat_history(
     authorization: str = Header(None)
@@ -305,21 +321,18 @@ def get_chat_history(
         )
 
         chats = list(
-
             chat_collection.find(
-
-                {"user_id": user_id},
-
                 {
-                    "_id": 0
+                    "user_id": user_id
                 }
-
             ).sort(
                 "created_at",
                 1
             )
-
         )
+
+        for chat in chats:
+            chat["_id"] = str(chat["_id"])
 
         return chats
 
@@ -405,7 +418,7 @@ def select_pdf(
         "message": f"{file_name} selected"
     }
 
-@app.get("/pdf-file/{file_name}")
+@app.get("/pdf-file/{file_name:path}")
 def get_pdf_file(file_name: str):
 
     file_path = os.path.join(
@@ -413,10 +426,101 @@ def get_pdf_file(file_name: str):
         file_name
     )
 
+    print("Requested:", file_name)
+    print("Path:", file_path)
+    print("Exists:", os.path.exists(file_path))
+
     if not os.path.exists(file_path):
-        return {"error": "PDF not found"}
+        return {
+            "error": f"PDF not found: {file_path}"
+        }
 
     return FileResponse(
-        file_path,
-        media_type="application/pdf"
+        path=file_path,
+        media_type="application/pdf",
+        filename=file_name
     )
+
+
+@app.delete("/chat/{chat_id}")
+def delete_chat(
+    chat_id: str,
+    authorization: str = Header(None)
+):
+
+    user_id = get_user_id(
+        authorization
+    )
+
+    chat_collection.delete_one({
+        "_id": ObjectId(chat_id),
+        "user_id": user_id
+    })
+
+    return {
+        "message": "Chat deleted"
+    }
+    
+@app.delete("/clear-chat")
+def clear_chat(
+    authorization: str = Header(None)
+):
+
+    user_id = get_user_id(
+        authorization
+    )
+
+    chat_collection.delete_many({
+        "user_id": user_id
+    })
+
+    return {
+        "message": "Chat cleared"
+    }
+ 
+
+
+@app.delete("/delete-pdf/{file_name}")
+def delete_pdf(
+    file_name: str,
+    authorization: str = Header(None)
+):
+    try:
+
+        user_id = get_user_id(
+            authorization
+        )
+
+        pdf = pdf_collection.find_one({
+            "user_id": user_id,
+            "file_name": file_name
+        })
+
+        if not pdf:
+            return {
+                "error": "PDF not found"
+            }
+
+        file_path = pdf.get(
+            "file_path"
+        )
+
+        if (
+            file_path and
+            os.path.exists(file_path)
+        ):
+            os.remove(file_path)
+
+        pdf_collection.delete_one({
+            "_id": pdf["_id"]
+        })
+
+        return {
+            "message": "PDF deleted"
+        }
+
+    except Exception as e:
+
+        return {
+            "error": str(e)
+        }

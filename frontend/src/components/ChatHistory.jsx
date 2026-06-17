@@ -6,9 +6,7 @@ export default function ChatHistory() {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-
     loadHistory();
-
   }, []);
 
   const loadHistory = async () => {
@@ -20,14 +18,36 @@ export default function ChatHistory() {
       );
 
       if (Array.isArray(res.data)) {
-
         setHistory(res.data);
-
       }
+
+    } catch (err) {
+      console.log(err);
+    }
+
+  };
+
+  const deleteChat = async (id) => {
+
+    try {
+
+      await API.delete(
+        `/chat/${id}`
+      );
+
+      setHistory(
+        history.filter(
+          (chat) => chat._id !== id
+        )
+      );
 
     } catch (err) {
 
       console.log(err);
+
+      alert(
+        "Failed to delete chat"
+      );
 
     }
 
@@ -63,30 +83,46 @@ export default function ChatHistory() {
 
         ) : (
 
-          history.map((chat, index) => (
+          history.map((chat) => (
 
             <div
-              key={index}
-              className="mb-3 bg-slate-900 hover:bg-slate-800 p-3 rounded-lg cursor-pointer transition"
+              key={chat._id}
+              className="
+                mb-3
+                bg-slate-900
+                p-3
+                rounded-lg
+              "
             >
 
-              <p className="text-sm text-white truncate">
+              <div className="flex justify-between items-start">
 
-                {chat.question}
+                <p className="text-sm text-white flex-1 truncate">
+                  {chat.question}
+                </p>
 
-              </p>
+                <button
+                  onClick={() =>
+                    deleteChat(chat._id)
+                  }
+                  className="
+                    ml-2
+                    text-red-400
+                    hover:text-red-300
+                  "
+                >
+                  🗑
+                </button>
 
-              <p className="text-xs text-slate-500 mt-1">
+              </div>
 
-                {
-                  chat.created_at
-                  ?
-                  new Date(
-                    chat.created_at
-                  ).toLocaleString()
-                  :
-                  ""
-                }
+              <p className="text-xs text-slate-500 mt-2">
+
+                {chat.created_at
+                  ? new Date(
+                      chat.created_at
+                    ).toLocaleString()
+                  : ""}
 
               </p>
 
@@ -101,4 +137,5 @@ export default function ChatHistory() {
     </div>
 
   );
+
 }

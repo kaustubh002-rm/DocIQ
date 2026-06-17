@@ -1,65 +1,79 @@
 import { useState, useEffect } from "react";
-
 import API from "../services/api";
-
 import MessageBubble from "./MessageBubble";
-
 import Loader from "./Loader";
 
 export default function ChatBox() {
 
   const [question, setQuestion] = useState("");
-
   const [messages, setMessages] = useState([]);
-
   const [loading, setLoading] = useState(false);
 
-  // Load previous chats after refresh
-  useEffect(() => {
+  const loadChats = async () => {
 
-    const loadChats = async () => {
+    try {
 
-      try {
+      const res = await API.get(
+        "/chat-history"
+      );
 
-        const res = await API.get(
-          "/chat-history"
-        );
+      const loaded = [];
 
-        const loaded = [];
+      res.data.forEach((chat) => {
 
-        res.data.forEach((chat) => {
-
-          loaded.push({
-            type: "user",
-            text: chat.question
-          });
-
-          loaded.push({
-            type: "ai",
-            text:
-              chat.answer +
-              "\n\nSources:\n" +
-              ((chat.sources || []).join("\n"))
-          });
-
+        loaded.push({
+          type: "user",
+          text: chat.question
         });
 
-        setMessages(loaded);
+        loaded.push({
+          type: "ai",
+          text:
+            chat.answer +
+            "\n\nSources:\n" +
+            ((chat.sources || []).join("\n"))
+        });
 
-      } catch (error) {
+      });
 
-        console.log(
-          "History Load Error:",
-          error
-        );
+      setMessages(loaded);
 
-      }
+    } catch (error) {
 
-    };
+      console.log(
+        "History Load Error:",
+        error
+      );
+
+    }
+
+  };
+
+  useEffect(() => {
 
     loadChats();
 
   }, []);
+
+  const clearChat = async () => {
+
+    try {
+
+      await API.delete(
+        "/clear-chat"
+      );
+
+      setMessages([]);
+
+    } catch (error) {
+
+      console.log(error);
+
+      alert("Failed to clear chat");
+
+    }
+
+  };
 
   const askQuestion = async () => {
 
@@ -70,7 +84,7 @@ export default function ChatBox() {
       text: question
     };
 
-    setMessages((prev) => [
+    setMessages(prev => [
       ...prev,
       userMessage
     ]);
@@ -86,14 +100,9 @@ export default function ChatBox() {
         }
       );
 
-      console.log(
-        "BACKEND RESPONSE:",
-        response.data
-      );
-
       if (response.data.error) {
 
-        setMessages((prev) => [
+        setMessages(prev => [
           ...prev,
           {
             type: "ai",
@@ -102,6 +111,7 @@ export default function ChatBox() {
         ]);
 
         return;
+
       }
 
       const aiMessage = {
@@ -119,7 +129,7 @@ export default function ChatBox() {
 
       };
 
-      setMessages((prev) => [
+      setMessages(prev => [
         ...prev,
         aiMessage
       ]);
@@ -128,7 +138,7 @@ export default function ChatBox() {
 
       console.log(error);
 
-      setMessages((prev) => [
+      setMessages(prev => [
 
         ...prev,
 
@@ -154,7 +164,31 @@ export default function ChatBox() {
 
     <div className="h-full flex flex-col">
 
-      {/* CHAT AREA */}
+      {/* HEADER */}
+
+      <div className="border-b border-slate-800 p-3 flex justify-between">
+
+        <h2 className="font-semibold">
+          Chat
+        </h2>
+
+        <button
+          onClick={clearChat}
+          className="
+            bg-red-600
+            hover:bg-red-700
+            px-3
+            py-1
+            rounded
+            text-sm
+          "
+        >
+          Clear Chat
+        </button>
+
+      </div>
+
+      {/* CHAT */}
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
 
@@ -176,7 +210,7 @@ export default function ChatBox() {
 
       </div>
 
-      {/* INPUT AREA */}
+      {/* INPUT */}
 
       <div className="border-t border-slate-800 p-4">
 
@@ -214,4 +248,5 @@ export default function ChatBox() {
     </div>
 
   );
+
 }

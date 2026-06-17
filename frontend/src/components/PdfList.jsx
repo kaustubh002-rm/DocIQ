@@ -7,88 +7,135 @@ export default function PdfList({
 }) {
 
   const [pdfs, setPdfs] = useState([]);
-
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-
-    const loadPdfs = async () => {
-
-      try {
-
-        const res = await API.get(
-          "/my-pdfs"
-        );
-
-        setPdfs(res.data);
-
-      } catch (error) {
-
-        console.log(
-          "PDF Load Error:",
-          error
-        );
-
-      } finally {
-
-        setLoading(false);
-
-      }
-
-    };
-
     loadPdfs();
-
   }, []);
 
-  const selectPdf = async (fileName) => {
+  const loadPdfs = async () => {
 
-  try {
+    try {
 
-    await API.post(
-      `/select-pdf/${fileName}`
-    );
+      const res = await API.get(
+        "/my-pdfs"
+      );
 
-    const pdfUrl =
-      `http://localhost:8000/pdf-file/${encodeURIComponent(fileName)}`;
+      setPdfs(res.data);
 
-    localStorage.setItem(
-      "pdfName",
-      fileName
-    );
+    } catch (error) {
 
-    localStorage.setItem(
-      "pdfUrl",
-      pdfUrl
-    );
+      console.log(
+        "PDF Load Error:",
+        error
+      );
 
-    setPdfUrl(pdfUrl);
+    } finally {
 
-    close();
+      setLoading(false);
 
-  } catch (error) {
+    }
 
-    console.log(error);
+  };
 
-    alert(
-      "Failed to select PDF"
-    );
+  const selectPdf = async (
+    fileName
+  ) => {
 
-  }
+    try {
 
-};
+      await API.post(
+        `/select-pdf/${encodeURIComponent(fileName)}`
+      );
+
+      const pdfUrl =
+        `http://localhost:8000/pdf-file/${encodeURIComponent(fileName)}`;
+
+      localStorage.setItem(
+        "pdfName",
+        fileName
+      );
+
+      localStorage.setItem(
+        "pdfUrl",
+        pdfUrl
+      );
+
+      setPdfUrl(pdfUrl);
+
+      close();
+
+    } catch (error) {
+
+      console.log(error);
+
+      alert(
+        "Failed to select PDF"
+      );
+
+    }
+
+  };
+
+  const deletePdf = async (
+    fileName
+  ) => {
+
+    const confirmDelete =
+      window.confirm(
+        `Delete ${fileName}?`
+      );
+
+    if (!confirmDelete) return;
+
+    try {
+
+      await API.delete(
+        `/delete-pdf/${encodeURIComponent(fileName)}`
+      );
+
+      setPdfs((prev) =>
+        prev.filter(
+          (pdf) =>
+            pdf.file_name !== fileName
+        )
+      );
+
+      if (
+        localStorage.getItem(
+          "pdfName"
+        ) === fileName
+      ) {
+
+        localStorage.removeItem(
+          "pdfName"
+        );
+
+        localStorage.removeItem(
+          "pdfUrl"
+        );
+
+        setPdfUrl(null);
+      }
+
+    } catch (error) {
+
+      console.log(error);
+
+      alert(
+        "Failed to delete PDF"
+      );
+
+    }
+
+  };
 
   if (loading) {
 
     return (
-
       <div className="p-4">
-
         Loading PDFs...
-
       </div>
-
     );
 
   }
@@ -100,9 +147,7 @@ export default function PdfList({
       <div className="flex items-center justify-between mb-4">
 
         <h2 className="text-lg font-bold">
-
           My PDFs
-
         </h2>
 
         <button
@@ -123,55 +168,74 @@ export default function PdfList({
       {pdfs.length === 0 ? (
 
         <p className="text-slate-400">
-
           No PDFs uploaded yet
-
         </p>
 
       ) : (
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col gap-3">
 
           {pdfs.map(
             (pdf, index) => (
 
-              <button
+              <div
                 key={index}
-                onClick={() =>
-                  selectPdf(
-                    pdf.file_name
-                  )
-                }
                 className="
                   bg-slate-800
-                  hover:bg-slate-700
-                  px-4
-                  py-3
                   rounded-lg
-                  text-left
-                  transition
+                  p-4
+                  flex
+                  justify-between
+                  items-center
                 "
               >
 
-                <div className="font-medium">
+                <div
+                  className="cursor-pointer flex-1"
+                  onClick={() =>
+                    selectPdf(
+                      pdf.file_name
+                    )
+                  }
+                >
 
-                  📄 {pdf.file_name}
+                  <div className="font-medium">
+                    📄 {pdf.file_name}
+                  </div>
+
+                  <div
+                    className="
+                      text-xs
+                      text-slate-400
+                      mt-1
+                    "
+                  >
+                    {new Date(
+                      pdf.upload_date
+                    ).toLocaleString()}
+                  </div>
 
                 </div>
 
-                <div
+                <button
+                  onClick={() =>
+                    deletePdf(
+                      pdf.file_name
+                    )
+                  }
                   className="
-                    text-xs
-                    text-slate-400
-                    mt-1
+                    bg-red-600
+                    hover:bg-red-700
+                    px-3
+                    py-2
+                    rounded
+                    ml-3
                   "
                 >
-                  {new Date(
-                    pdf.upload_date
-                  ).toLocaleString()}
-                </div>
+                  Delete
+                </button>
 
-              </button>
+              </div>
 
             )
           )}
@@ -183,4 +247,5 @@ export default function PdfList({
     </div>
 
   );
+
 }
