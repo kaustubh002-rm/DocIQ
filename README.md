@@ -1,6 +1,6 @@
 AI PDF Assistant (RAG System)
 
-FastAPI | React.js | MongoDB | LangChain | ChromaDB | Groq LLM | HuggingFace
+FastAPI | React.js | MongoDB | LangChain | ChromaDB | Groq LLM | HuggingFace Embeddings
 
 • Built an AI-powered document intelligence platform that enables conversational querying over PDF documents using Retrieval-Augmented Generation (RAG).
 
