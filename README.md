@@ -1,5 +1,3 @@
-<img width="1408" height="768" alt="image" src="https://github.com/user-attachments/assets/a55d7197-3fe9-41d6-9eac-68c197d53f6d" />AI PDF Assistant (RAG System)
-
 FastAPI | React.js | MongoDB | LangChain | ChromaDB | Groq LLM | HuggingFace Embeddings
 
 • Built an AI-powered document intelligence platform that enables conversational querying over PDF documents using Retrieval-Augmented Generation (RAG).
@@ -19,6 +17,4 @@ FastAPI | React.js | MongoDB | LangChain | ChromaDB | Groq LLM | HuggingFace Emb
 
 Work Flow Diagram:
 
-## 📸 Project Screenshot
-
-![DocIQ](./images/DocIQ.jpg)
+<img width="1408" height="768" alt="DocIQ" src="https://github.com/user-attachments/assets/a7d9c2d8-c90c-482e-b5bd-2c547a6ad36a" />
