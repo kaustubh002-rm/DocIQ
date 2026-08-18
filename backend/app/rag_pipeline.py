@@ -33,7 +33,7 @@ embedding_model = HuggingFaceEmbeddings(
 
 llm = ChatGroq(
     api_key=GROQ_API_KEY,
-    model="llama-3.1-8b-instant",
+    model="openai/gpt-oss-120b",
     temperature=0.3,
     max_tokens=512
 )
