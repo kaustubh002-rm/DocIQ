@@ -11,9 +11,7 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains.retrieval import create_retrieval_chain
 from langchain_groq import ChatGroq
 
-# =========================
-# CONFIG
-# =========================
+
 
 CHROMA_DB_DIR = "./chroma_db"
 
@@ -27,9 +25,7 @@ embedding_model = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2"
 )
 
-# =========================
-# LLM
-# =========================
+
 
 llm = ChatGroq(
     api_key=GROQ_API_KEY,
@@ -38,18 +34,12 @@ llm = ChatGroq(
     max_tokens=512
 )
 
-# =========================
-# SPLITTER
-# =========================
-
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=800,
     chunk_overlap=150
 )
 
-# =========================
-# PROMPT
-# =========================
+
 
 RAG_PROMPT = ChatPromptTemplate.from_template(
     """
@@ -75,9 +65,7 @@ Answer:
 """
 )
 
-# =========================
-# COLLECTION NAME FIX
-# =========================
+
 
 def get_collection_name(file_name: str):
 
@@ -113,9 +101,7 @@ def get_collection_name(file_name: str):
 
     return collection_name
 
-# =========================
 # VECTOR STORE CREATE
-# =========================
 
 def create_vector_store(
     text: str,
@@ -152,9 +138,7 @@ def create_vector_store(
 
     return vector_store, len(chunks)
 
-# =========================
 # LOAD VECTOR STORE
-# =========================
 
 def load_vector_store(
     file_name: str
@@ -170,9 +154,7 @@ def load_vector_store(
         collection_name=collection_name
     )
 
-# =========================
 # QA CHAIN
-# =========================
 
 def get_qa_chain(
     file_name: str
@@ -185,11 +167,11 @@ def get_qa_chain(
     retriever = vector_store.as_retriever(
         search_type="similarity",
         search_kwargs={
-            "k": 3
+            "k": 3                             # get top 3 relevant chunks
         }
     )
 
-    doc_chain = create_stuff_documents_chain(
+    doc_chain = create_stuff_documents_chain(         # retrived chunks get to contxt in prompt
         llm,
         RAG_PROMPT
     )
